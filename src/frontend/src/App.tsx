@@ -9,7 +9,7 @@
   See LICENSE.md for details and disclaimers.
 */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { GraphCanvas } from './graph';
 import {
   SearchBar,
@@ -21,11 +21,12 @@ import {
   Tooltip,
 } from './components';
 import { CRDTDocument } from './crdt';
-import { P2PManager } from './p2p';
+import { P2PManager, generatePeerId } from './p2p';
 import { createLLMAdapter } from './ai';
-import { useTheme, useKeyboard, useReducedMotion } from './hooks';
+import type { LocalLLMAdapter } from './ai';
+import { useTheme, useKeyboard } from './hooks';
 import { DEMO_NODES, DEMO_EDGES } from './demoData';
-import type { GraphNode, GraphEdge, SearchResult } from './types';
+import type { GraphNode, GraphEdge } from './types';
 
 /* ------------------------------------------------------------------ */
 /*  Main Application                                                   */
@@ -33,8 +34,7 @@ import type { GraphNode, GraphEdge, SearchResult } from './types';
 
 export default function App() {
   /* ---- Theme ---- */
-  const { theme, toggle: toggleTheme } = useTheme();
-  const reducedMotion = useReducedMotion();
+  const { theme, toggleTheme } = useTheme();
 
   /* ---- State ---- */
   const [nodes, setNodes] = useState<GraphNode[]>(DEMO_NODES);
@@ -47,12 +47,16 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done'>('idle');
   const [explanation, setExplanation] = useState('');
   const [explaining, setExplaining] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [llmAdapter, setLlmAdapter] = useState<LocalLLMAdapter | null>(null);
 
   /* ---- Refs ---- */
   const crdtRef = useRef<CRDTDocument | null>(null);
   const p2pRef = useRef<P2PManager | null>(null);
-  const llmRef = useRef(createLLMAdapter());
+
+  /* ---- Init LLM ---- */
+  useEffect(() => {
+    createLLMAdapter().then(setLlmAdapter);
+  }, []);
 
   /* ---- Init CRDT + P2P ---- */
   useEffect(() => {
@@ -61,16 +65,19 @@ export default function App() {
 
     // Seed CRDT from demo data
     DEMO_NODES.forEach((n) =>
-      doc.addNode(n.id, {
+      doc.addNode({
+        id: n.id,
         label: n.label,
         category: n.category,
         description: n.description ?? '',
         positionX: n.positionX ?? 0,
         positionY: n.positionY ?? 0,
+        metadata: {},
       }),
     );
     DEMO_EDGES.forEach((e) =>
-      doc.addEdge(e.id, {
+      doc.addEdge({
+        id: e.id,
         sourceId: e.sourceId,
         targetId: e.targetId,
         label: e.label,
@@ -82,16 +89,16 @@ export default function App() {
     doc.onNodesChange(() => {
       const allNodes = doc.getAllNodes();
       setNodes(
-        allNodes.map(([id, data]) => ({
-          id,
+        allNodes.map((node) => ({
+          id: node.id,
           graphId: 'demo-graph-001',
-          label: String(data.label ?? ''),
-          category: String(data.category ?? 'general'),
-          description: data.description != null ? String(data.description) : null,
-          positionX: Number(data.positionX ?? 0),
-          positionY: Number(data.positionY ?? 0),
+          label: node.label,
+          category: node.category,
+          description: node.description || null,
+          positionX: node.positionX,
+          positionY: node.positionY,
           cid: null,
-          metadata: null,
+          metadata: node.metadata || null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         })),
@@ -101,13 +108,13 @@ export default function App() {
     doc.onEdgesChange(() => {
       const allEdges = doc.getAllEdges();
       setEdges(
-        allEdges.map(([id, data]) => ({
-          id,
+        allEdges.map((edge) => ({
+          id: edge.id,
           graphId: 'demo-graph-001',
-          sourceId: String(data.sourceId ?? ''),
-          targetId: String(data.targetId ?? ''),
-          label: String(data.label ?? ''),
-          weight: Number(data.weight ?? 1),
+          sourceId: edge.sourceId,
+          targetId: edge.targetId,
+          label: edge.label,
+          weight: edge.weight,
           metadata: null,
           createdAt: new Date().toISOString(),
         })),
@@ -115,8 +122,8 @@ export default function App() {
     });
 
     // P2P
-    const p2p = new P2PManager();
-    p2p.attachDocument(doc);
+    const p2p = new P2PManager({ peerId: generatePeerId() });
+    p2p.setDocument(doc);
     p2pRef.current = p2p;
 
     return () => {
@@ -125,83 +132,50 @@ export default function App() {
     };
   }, []);
 
-  /* ---- Search ---- */
-  const handleSearch = useCallback(
-    (query: string) => {
-      if (!query.trim()) {
-        setSearchResults([]);
-        return;
-      }
-      const q = query.toLowerCase();
-      const results: SearchResult[] = nodes
-        .filter(
-          (n) =>
-            n.label.toLowerCase().includes(q) ||
-            (n.description ?? '').toLowerCase().includes(q) ||
-            n.category.toLowerCase().includes(q),
-        )
-        .map((n) => ({
-          nodeId: n.id,
-          label: n.label,
-          category: n.category,
-          score: n.label.toLowerCase().startsWith(q) ? 1 : 0.5,
-          snippet: n.description ?? '',
-        }));
-      setSearchResults(results);
-    },
-    [nodes],
-  );
-
-  const handleSelectResult = useCallback(
-    (result: SearchResult) => {
-      const node = nodes.find((n) => n.id === result.nodeId) ?? null;
-      setSelected(node);
-      setDetailOpen(!!node);
-      setSearchResults([]);
-    },
-    [nodes],
-  );
-
   /* ---- Node selection ---- */
-  const handleNodeClick = useCallback(
-    (nodeId: string) => {
-      const node = nodes.find((n) => n.id === nodeId) ?? null;
+  const handleSelectResult = useCallback(
+    (node: GraphNode) => {
       setSelected(node);
-      setDetailOpen(!!node);
+      setDetailOpen(true);
+    },
+    [],
+  );
+
+  const handleNodeClick = useCallback(
+    (node: GraphNode) => {
+      setSelected(node);
+      setDetailOpen(true);
       setExplanation('');
     },
-    [nodes],
+    [],
   );
 
   /* ---- Explain ---- */
   const handleExplain = useCallback(async () => {
-    if (!selected) return;
+    if (!selected || !llmAdapter) return;
     setExplaining(true);
     try {
-      const adapter = llmRef.current;
-      const text = await adapter.explain(selected.label, selected.description ?? '');
+      const text = await llmAdapter.explain(selected.label, selected.description ?? '');
       setExplanation(text);
     } catch {
       setExplanation('Unable to generate explanation.');
     } finally {
       setExplaining(false);
     }
-  }, [selected]);
+  }, [selected, llmAdapter]);
 
   /* ---- P2P Gossip Demo ---- */
   const handleGossipDemo = useCallback(async () => {
     const p2p = p2pRef.current;
-    if (!p2p) return;
+    const doc = crdtRef.current;
+    if (!p2p || !doc) return;
     setSyncStatus('syncing');
     setPeerCount(1);
     await new Promise((r) => setTimeout(r, 600));
     try {
-      const { simulateGossip } = await import('./p2p');
-      const doc = crdtRef.current;
-      if (doc) {
-        simulateGossip(doc);
-        setPeerCount(2);
-      }
+      const remoteDoc = new CRDTDocument();
+      p2p.simulateGossip(remoteDoc);
+      setPeerCount(2);
     } catch {
       /* no-op */
     }
@@ -210,15 +184,17 @@ export default function App() {
   }, []);
 
   /* ---- Keyboard shortcuts ---- */
-  useKeyboard('Escape', () => {
-    setDetailOpen(false);
-    setSidebarOpen(false);
+  useKeyboard({
+    Escape: () => {
+      setDetailOpen(false);
+      setSidebarOpen(false);
+    },
+    '/': () => {
+      const el = document.querySelector<HTMLInputElement>('[data-search-input]');
+      el?.focus();
+    },
+    p: () => setPresenterMode((v) => !v),
   });
-  useKeyboard('/', () => {
-    const el = document.querySelector<HTMLInputElement>('[data-search-input]');
-    el?.focus();
-  });
-  useKeyboard('p', () => setPresenterMode((v) => !v));
 
   /* ---- Stats ---- */
   const stats = useMemo(
@@ -231,8 +207,8 @@ export default function App() {
   );
 
   /* ---- LLM info ---- */
-  const llmName = llmRef.current.name;
-  const llmLocal = llmRef.current.isLocal;
+  const llmName = llmAdapter?.name ?? 'Loading...';
+  const llmLocal = llmAdapter?.isLocal ?? true;
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-surface text-on-surface">
@@ -461,7 +437,7 @@ export default function App() {
             node={selected}
             onExplain={handleExplain}
             explanation={explanation}
-            explaining={explaining}
+            explanationLoading={explaining}
           />
         )}
       </Modal>
