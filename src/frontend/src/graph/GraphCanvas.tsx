@@ -14,7 +14,7 @@
  * pan/zoom, node selection, LOD rendering, and accessibility.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import type { GraphNode, GraphEdge } from '../types';
 import { CATEGORY_COLORS } from '../types';
@@ -83,8 +83,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
   // Main D3 render
   useEffect(() => {
-    const svg = d3.select(svgRef.current);
-    if (!svg.node()) return;
+    const svgEl = svgRef.current;
+    if (!svgEl) return;
+    const svg = d3.select(svgEl);
 
     const { width, height } = dimensions;
 
@@ -100,7 +101,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
       });
-    svg.call(zoom);
+    (svg as any).call(zoom);
 
     // Prepare simulation data
     const simNodes: SimNode[] = nodes.map((n) => ({
@@ -263,16 +264,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     // Double-click to center
     nodeElements.on('dblclick', (event, d) => {
       event.stopPropagation();
-      svg
-        .transition()
-        .duration(500)
-        .call(
-          zoom.transform,
-          d3.zoomIdentity
-            .translate(width / 2, height / 2)
-            .scale(1.5)
-            .translate(-(d.x ?? 0), -(d.y ?? 0)),
-        );
+      (svg.transition().duration(500) as any).call(
+        zoom.transform,
+        d3.zoomIdentity
+          .translate(width / 2, height / 2)
+          .scale(1.5)
+          .translate(-(d.x ?? 0), -(d.y ?? 0)),
+      );
     });
 
     // Tick
@@ -292,7 +290,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     // Initial zoom to fit
     const initialZoom = d3.zoomIdentity.translate(0, 0).scale(0.9);
-    svg.call(zoom.transform, initialZoom);
+    (svg as any).call(zoom.transform, initialZoom);
 
     return () => {
       simulation.stop();
@@ -301,9 +299,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
   // Update selection ring when selectedNodeId changes
   useEffect(() => {
-    const svg = d3.select(svgRef.current);
+    const svgEl = svgRef.current;
+    if (!svgEl) return;
+    const svg = d3.select(svgEl);
     svg.selectAll('.selection-ring').attr('stroke', function () {
-      const parent = d3.select(this.parentNode as Element);
+      const el = this as Element;
+      if (!el.parentNode) return 'transparent';
+      const parent = d3.select(el.parentNode as Element);
       const datum = parent.datum() as SimNode | undefined;
       return datum?.id === selectedNodeId
         ? 'var(--color-primary)'
