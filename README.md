@@ -6,15 +6,6 @@
 # 🌐 Project Mycelium
 **Local-first knowledge graph with offline AI, CRDT sync, and encrypted storage. Zero cloud dependency.**
 
-<p>
-  <a href="https://github.com/Zorvia/project-mycelium/actions">
-    <img alt="build" src="https://img.shields.io/github/actions/workflow/status/Zorvia/project-mycelium/ci.yml?style=for-the-badge&logo=github&logoColor=white&color=1e3a8a&label=build">
-  </a>
-  <a href="https://github.com/Zorvia/project-mycelium/blob/main/LICENSE.md">
-    <img alt="license" src="https://img.shields.io/github/license/Zorvia/project-mycelium?style=for-the-badge&logo=open-source-initiative&logoColor=white&color=3b82f6">
-  </a>
-</p>
-
 > Like fungal mycelium, ideas propagate underground — resilient, private, and interconnected.
 
 </div>
@@ -115,5 +106,6 @@ Repository: [GitHub](https://github.com/Zorvia/project-mycelium)
 ## ✦ License
 
 [Zorvia Public License v2.0](LICENSE.md)
+
 
 
