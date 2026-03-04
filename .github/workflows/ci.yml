@@ -1,0 +1,336 @@
+# Project Mycelium — Nurturing Knowledge Without the Cloud
+# Copyright (c) 2026 Zorvia Community (https://github.com/Zorvia)
+#
+# Licensed under the Zorvia Public License v2.0 (ZPL v2.0)
+# See LICENSE.md for full text.
+#
+# ─────────────────────────────────────────────────────────────
+# CI Workflow — lint, test, build, export demo, Docker, docs
+# Runs on every push to main/develop and on pull requests.
+# ─────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
+
+# ──────────────────────────────────────────────────────────────
+# Jobs
+# ──────────────────────────────────────────────────────────────
+
+jobs:
+
+  # ──────────────────── Lint ────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python ──
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-lint-${{ runner.os }}-
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Ruff lint check
+        run: ruff check src/backend/ scripts/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check src/backend/ scripts/ tests/
+
+      # ── Node / TypeScript ──
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install Node deps
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: TypeScript type-check
+        working-directory: src/frontend
+        run: npx tsc --noEmit
+
+  # ──────────────── License Header Check ──────────────────
+  license-headers:
+    name: License Headers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify ZPL v2.0 headers
+        # Checks that every .py and .ts/.tsx source file contains the
+        # required license header comment. Adjust the grep pattern if
+        # your header wording differs.
+        run: |
+          echo "Checking license headers in Python files..."
+          MISSING_PY=0
+          for f in $(find src/backend scripts tests -name '*.py' -not -path '*__pycache__*'); do
+            if ! head -10 "$f" | grep -qi "Zorvia Public License\|ZPL v2\.0\|Licensed under"; then
+              echo "  MISSING HEADER: $f"
+              MISSING_PY=$((MISSING_PY + 1))
+            fi
+          done
+
+          echo "Checking license headers in TypeScript files..."
+          MISSING_TS=0
+          for f in $(find src/frontend/src -name '*.ts' -o -name '*.tsx' | head -50); do
+            if ! head -10 "$f" | grep -qi "Zorvia\|ZPL\|Project Mycelium"; then
+              echo "  MISSING HEADER: $f"
+              MISSING_TS=$((MISSING_TS + 1))
+            fi
+          done
+
+          TOTAL=$((MISSING_PY + MISSING_TS))
+          if [ "$TOTAL" -gt 0 ]; then
+            echo ""
+            echo "❌ $TOTAL file(s) missing license headers."
+            exit 1
+          fi
+          echo "✅ All source files have license headers."
+
+  # ──────────────── Backend Tests ──────────────────
+  test-backend:
+    name: Backend Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-test-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-test-${{ runner.os }}-py${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: |
+          cd src/backend
+          python -m pytest ../../tests/backend/ -v --tb=short
+        env:
+          MYCELIUM_ENV: test
+
+  # ──────────────── Frontend Tests ──────────────────
+  test-frontend:
+    name: Frontend Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['18', '20']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Run Vitest
+        working-directory: src/frontend
+        run: npx vitest run --reporter=verbose
+
+  # ──────────────── Build Frontend ──────────────────
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: src/frontend
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: src/frontend/dist/
+          retention-days: 7
+
+  # ──────────────── Export Static Demo ──────────────────
+  export-demo:
+    name: Export Demo
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-demo-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-demo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install jinja2
+
+      - name: Generate demo HTML
+        run: python scripts/export_demo.py
+
+      - name: Verify demo file exists
+        run: test -f demo/mycelium_demo.html
+
+      - name: Upload demo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-html
+          path: demo/mycelium_demo.html
+          retention-days: 30
+
+  # ──────────────── Verification Suite ──────────────────
+  verify:
+    name: Verify Demo Suite
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run verify_demo.sh
+        run: bash scripts/verify_demo.sh
+
+  # ──────────────── Docker Build ──────────────────
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: mycelium:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ──────────────── Validate Documentation ──────────────────
+  docs:
+    name: Validate Docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run documentation validator
+        run: python docs/validate_docs.py
+
+  # ──────────────── All-Green Gate ──────────────────
+  # A single check that branch-protection rules can require.
+  ci-pass:
+    name: CI ✅
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - license-headers
+      - test-backend
+      - test-frontend
+      - build
+      - export-demo
+      - verify
+      - docker
+      - docs
+
+    steps:
+      - name: Decide outcome
+        run: |
+          # Fail if any upstream job was not successful.
+          echo "Results: ${{ toJSON(needs.*.result) }}"
+          if echo '${{ toJSON(needs.*.result) }}' | grep -qE '"failure"|"cancelled"'; then
+            echo "❌ One or more required jobs failed."
+            exit 1
+          fi
+          echo "✅ All CI jobs passed."
