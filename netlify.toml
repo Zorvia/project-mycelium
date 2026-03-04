@@ -9,11 +9,11 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# SPA fallback — serve index.html for all routes not matching a file
 [[redirects]]
-  from = "/api/*"
-  to = "https://your-backend.onrender.com/api/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
-  force = true
 
 [[headers]]
   for = "/*"
