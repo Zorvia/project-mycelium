@@ -1,7 +1,7 @@
 
 <div align="center">
 
-<img src="logo.png" alt="Project Mycelium Logo" width="200" />
+<img src="logo.svg" alt="Project Mycelium Logo" width="200" />
 
 # 🌐 Project Mycelium
 **Local-first knowledge graph with offline AI, CRDT sync, and encrypted storage. Zero cloud dependency.**
@@ -106,6 +106,7 @@ Repository: [GitHub](https://github.com/Zorvia/project-mycelium)
 ## ✦ License
 
 [Zorvia Public License v2.0](LICENSE.md)
+
 
 
 
