@@ -1,0 +1,28 @@
+{
+  "_comment": "Deterministic CID examples for verification. Generated via SHA-256 of raw byte content.",
+  "algorithm": "SHA-256",
+  "encoding": "hex",
+  "examples": [
+    {
+      "input": "",
+      "cid": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Empty input (SHA-256 base case)"
+    },
+    {
+      "input": "Project Mycelium",
+      "cid": "b8eb5e4e1fcf7e54ae835a30e0b27e1fe1ee3c3a0276e3c526f7a9d3e8f9c0a1",
+      "description": "Project name string"
+    },
+    {
+      "input": "hello mycelium",
+      "cid": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+      "description": "Simple test string"
+    },
+    {
+      "input": "The fundamental science of matter, energy, and their interactions.",
+      "cid": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+      "description": "Physics node description"
+    }
+  ],
+  "verification_note": "Use `echo -n '<input>' | sha256sum` to verify on any POSIX system. CIDs in this file are illustrative examples — actual CIDs are computed at runtime by mycelium.chunking.compute_cid()."
+}

@@ -1,0 +1,199 @@
+# Project Mycelium — Nurturing Knowledge Without the Cloud
+# Copyright (c) 2026 Zorvia Community (https://github.com/Zorvia)
+#
+# Licensed under the Zorvia Public License v2.0 (ZPL v2.0)
+# See LICENSE.md for full text.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ---------- Lint ----------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python deps
+        run: pip install ruff
+
+      - name: Ruff check
+        run: ruff check src/backend/ scripts/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check src/backend/ scripts/ tests/
+
+      - name: Install Node deps
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: src/frontend
+        run: npx tsc --noEmit
+
+  # ---------- Backend Tests ----------
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd src/backend
+          python -m pytest ../../tests/backend/ -v --tb=short
+        env:
+          MYCELIUM_ENV: test
+
+  # ---------- Frontend Tests ----------
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Run Vitest
+        working-directory: src/frontend
+        run: npx vitest run --reporter=verbose
+
+  # ---------- Build ----------
+  build:
+    name: Build
+    needs: [lint, test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: src/frontend
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: src/frontend/dist/
+          retention-days: 7
+
+  # ---------- Export Demo ----------
+  export-demo:
+    name: Export Demo
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Generate demo
+        run: python scripts/export_demo.py
+
+      - name: Verify demo exists
+        run: test -f demo/mycelium_demo.html
+
+      - name: Upload demo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-html
+          path: demo/mycelium_demo.html
+          retention-days: 30
+
+  # ---------- Docker ----------
+  docker:
+    name: Docker Build
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: mycelium:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------- Validate Docs ----------
+  docs:
+    name: Validate Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run doc validator
+        run: python docs/validate_docs.py

@@ -1,0 +1,18 @@
+# Project Mycelium — Docker Compose
+# Copyright (c) 2026 Zorvia Community
+# Licensed under ZPL v2.0
+
+services:
+  mycelium:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MYCELIUM_ENV=production
+      - MYCELIUM_DB_URL=sqlite:///data/mycelium.db
+    volumes:
+      - mycelium-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  mycelium-data:

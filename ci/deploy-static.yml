@@ -1,0 +1,46 @@
+# Project Mycelium — Nurturing Knowledge Without the Cloud
+# Copyright (c) 2026 Zorvia Community (https://github.com/Zorvia)
+#
+# Licensed under the Zorvia Public License v2.0 (ZPL v2.0)
+# See LICENSE.md for full text.
+
+name: Deploy Static Demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate demo
+        run: python scripts/export_demo.py
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

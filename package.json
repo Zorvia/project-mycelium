@@ -1,0 +1,41 @@
+{
+  "name": "project-mycelium",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project Mycelium — Nurturing Knowledge Without the Cloud",
+  "license": "ZPL-2.0",
+  "author": "Zorvia Community <https://github.com/Zorvia>",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd src/frontend && npx vite --port 3000",
+    "dev:backend": "cd src/backend && python -m uvicorn mycelium.main:app --reload --port 8000",
+    "build": "cd src/frontend && npx vite build",
+    "preview": "cd src/frontend && npx vite preview",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd src/frontend && npx vitest run",
+    "test:backend": "cd src/backend && python -m pytest",
+    "test:e2e": "npx playwright test",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd src/frontend && npx eslint src/ --ext .ts,.tsx",
+    "lint:backend": "cd src/backend && python -m ruff check .",
+    "export:demo": "python scripts/export_demo.py",
+    "seed": "python scripts/seed_demo_data.py",
+    "storybook": "cd src/frontend && npx storybook dev -p 6006",
+    "storybook:build": "cd src/frontend && npx storybook build",
+    "verify": "bash scripts/verify_demo.sh",
+    "docker:build": "docker build -t mycelium:demo .",
+    "docker:run": "docker run -p 8000:8000 mycelium:demo"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zorvia/project-mycelium"
+  }
+}
