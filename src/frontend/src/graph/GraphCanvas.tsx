@@ -215,7 +215,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       .attr('r', presenterMode ? 18 : 14)
       .attr('fill', 'none')
       .attr('stroke', (d) =>
-        d.id === selectedNodeId ? 'var(--color-primary)' : 'transparent',
+        d.id === selectedNodeId ? 'rgb(var(--color-primary))' : 'transparent',
       )
       .attr('stroke-width', 2)
       .attr('class', 'selection-ring');
@@ -308,7 +308,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       const parent = d3.select(el.parentNode as Element);
       const datum = parent.datum() as SimNode | undefined;
       return datum?.id === selectedNodeId
-        ? 'var(--color-primary)'
+        ? 'rgb(var(--color-primary))'
         : 'transparent';
     });
   }, [selectedNodeId]);
