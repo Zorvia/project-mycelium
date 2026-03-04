@@ -1,0 +1,13 @@
+# Project Mycelium — Funding
+# All donations from this repo go to public-good, free education initiatives
+
+# This project is fully FOSS. If you want to support learning and science,
+# consider donating to these organizations:
+
+custom:
+  - name: "Khan Academy"
+    url: "https://www.khanacademy.org/donate"
+  - name: "Southern Cross Grammar"
+    url: "https://www.scg.vic.edu.au/contact-us" 
+  - name: "Science Talent Search (STS)"
+    url: "https://www.sciencevictoria.com.au/programs/science-talent-search" 
