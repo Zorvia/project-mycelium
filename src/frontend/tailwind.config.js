@@ -16,17 +16,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: 'var(--color-primary)',
+        primary: 'rgb(var(--color-primary) / <alpha-value>)',
         secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
         surface: 'var(--color-surface)',
         elevated: 'var(--color-elevated)',
         'text-high': 'var(--color-text-high)',
         'text-medium': 'var(--color-text-medium)',
         'text-disabled': 'var(--color-text-disabled)',
         success: 'var(--color-success)',
-        warn: 'var(--color-warn)',
-        danger: 'var(--color-danger)',
+        warn: 'rgb(var(--color-warn) / <alpha-value>)',
+        danger: 'rgb(var(--color-danger) / <alpha-value>)',
         border: 'var(--color-border)',
       },
       fontFamily: {
