@@ -17,17 +17,17 @@
 
 :root {
   /* Dark theme (default) */
-  --color-primary: #6D9BF1;
+  --color-primary: 109 155 241;
   --color-secondary: #A78BFA;
-  --color-accent: #34D399;
+  --color-accent: 52 211 153;
   --color-surface: #0F1117;
   --color-elevated: #1A1D2E;
   --color-text-high: #F1F5F9;
   --color-text-medium: #94A3B8;
   --color-text-disabled: #475569;
   --color-success: #22C55E;
-  --color-warn: #F59E0B;
-  --color-danger: #EF4444;
+  --color-warn: 245 158 11;
+  --color-danger: 239 68 68;
   --color-border: #2D3348;
 
   /* Typography */
@@ -46,17 +46,17 @@
 
 /* Light theme override */
 :root.light, .light {
-  --color-primary: #3B6FD4;
+  --color-primary: 59 111 212;
   --color-secondary: #7C3AED;
-  --color-accent: #059669;
+  --color-accent: 5 150 105;
   --color-surface: #FFFFFF;
   --color-elevated: #F8FAFC;
   --color-text-high: #0F172A;
   --color-text-medium: #475569;
   --color-text-disabled: #94A3B8;
   --color-success: #16A34A;
-  --color-warn: #D97706;
-  --color-danger: #DC2626;
+  --color-warn: 217 119 6;
+  --color-danger: 220 38 38;
   --color-border: #E2E8F0;
 }
 
@@ -79,7 +79,7 @@
 
   /* Focus outlines */
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid rgb(var(--color-primary));
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -105,7 +105,7 @@
 
   /* Selection */
   ::selection {
-    background-color: var(--color-primary);
+    background-color: rgb(var(--color-primary));
     color: var(--color-surface);
   }
 }
