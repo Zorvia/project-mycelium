@@ -1,0 +1,37 @@
+# DeepSeek R1 Distill (Qwen-7B) Adapter Configuration
+# ====================================================
+#
+# This file documents available configuration keys.  Values can also be
+# overridden via environment variables (prefix MYCELIUM_AI_) or keyword
+# arguments to ``initialize()``.
+#
+# Copy this file and adjust for your deployment.
+
+# Path to directory or .zip containing model files.
+# Required files:
+#   - model-00001-of-000002.safetensors
+#   - model-00002-of-000002.safetensors
+#   - config.json
+#   - tokenizer.json (or tokenizer_config.json or tokenizer.model)
+model_source: "path/to/DeepSeek-R1-Distill-Qwen-7B"
+
+# Directory for extracted/cached model files.
+# Supports ~ for user home directory.
+cache_dir: "~/.mycelium/ai_cache"
+
+# Target device: "cpu", "cuda", or "auto" (GPU if available, else CPU).
+device: "auto"
+
+# If true, attempt streaming reads directly from zip (experimental).
+use_zip_streaming: false
+
+# Maximum total bytes allowed in cache_dir (default 32 GB).
+max_cache_bytes: 34359738368
+
+# Minimum free disk space required before extraction (default 1 GB).
+min_free_bytes: 1073741824
+
+# Optional path to JSON file with expected SHA-256 hashes.
+# Format: {"filename": "hexdigest", ...}
+# If not set, computed hashes are printed for manual verification.
+checksums_file: null

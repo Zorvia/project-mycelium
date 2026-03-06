@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build outputs
+src/frontend/dist/
+demo/mycelium_demo.html
+*.tsbuildinfo
+
+# Test
+coverage/
+.pytest_cache/
+htmlcov/
+test-results/
+playwright-report/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+docker-compose.override.yml
+
+# Data
+data/*.db
+data/*.sqlite
+data/chunks/
+data/keys/
+
+# AI model weights and caches (never commit large binaries)
+*.safetensors
+*.gguf
+*.ggml
+*.bin.index.json
+model-*.bin
+ai_cache/
+.ai_cache/
+*.tmp_*
+
+# Model archives
+DeepSeek-R1-Distill-Qwen-7B/
+*.model.zip

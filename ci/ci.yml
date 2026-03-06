@@ -78,9 +78,35 @@ jobs:
       - name: Run tests
         run: |
           cd src/backend
-          python -m pytest ../../tests/backend/ -v --tb=short
+          python -m pytest ../../tests/backend/ -v --tb=short --ignore=../../tests/backend/deepseek_adapter/test_integration.py
         env:
           MYCELIUM_ENV: test
+
+  # ---------- AI Adapter Integration Tests (opt-in) ----------
+  test-ai-integration:
+    name: AI Adapter Integration
+    runs-on: ubuntu-latest
+    if: ${{ vars.MYCELIUM_MODEL_PATH != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install ".[ai]"
+
+      - name: Run integration tests
+        run: |
+          cd src/backend
+          python -m pytest ../../tests/backend/deepseek_adapter/test_integration.py -v --tb=short
+        env:
+          MYCELIUM_ENV: test
+          MYCELIUM_MODEL_PATH: ${{ vars.MYCELIUM_MODEL_PATH }}
 
   # ---------- Frontend Tests ----------
   test-frontend:
